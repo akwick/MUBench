@@ -1,6 +1,6 @@
 # coding=utf-8
 import logging
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 import yaml
 
@@ -210,3 +210,31 @@ class misusesbytype(StatCalculatorTask):
             logger.info("%35s ----------------------------", violation)
             for misuse in self.index[violation]:
                 logger.info("%35s %s", "", misuse.id)
+
+
+class misusesbyapi(StatCalculatorTask):
+
+    def __init__(self):
+        super().__init__()
+        self.apis = {}
+        self.logger = logging.getLogger('stats.misusesbyapi')
+
+    def run(self, project: Project, version: ProjectVersion, misuse: Misuse):
+        for a in misuse.apis:
+            if a in self.apis:
+                api = self.apis.get(a)
+            else:
+                api = {"misuses" : 0, "crashes" : 0}
+            api["misuses"] += 1
+            if misuse.is_crash:
+                api["crashes"] += 1
+            self.apis[a] = api
+
+    def end(self):
+        self.logger.info("  %80s %7s %7s" % ("API", "Misuses", "Crashes"))
+        for api in sorted(self.apis.items(), key=lambda s: s[1]["misuses"], reverse=True):
+            api_name = api[0]
+            api_stats = api[1]
+            self.logger.info("  %80s %7s %7s", api_name, api_stats["misuses"], api_stats["crashes"])
+
+
